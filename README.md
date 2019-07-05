@@ -354,6 +354,7 @@ docker run -d --name my-haproxy \
 --restart always \
 registry.cn-shanghai.aliyuncs.com/baicheng_dev/haproxy:2.0.0
 
+# 注意网卡配置
 docker run --net=host --cap-add=NET_ADMIN -d \
 -e KEEPALIVED_INTERFACE=ens33 \
 -e KEEPALIVED_VIRTUAL_IPS="#PYTHON2BASH:['192.168.250.99']" \
