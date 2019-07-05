@@ -300,7 +300,7 @@ systemctl daemon-reload && systemctl restart kubelet
 
 ```
 # 安装haproxy + keepalived, 实现HA
-- 在所有的master节点上配置haproxy代理和keepalived
+- 在所有的master节点上配置haproxy代理和keepalived  
 ```
 mkdir /etc/haproxy
 cat >/etc/haproxy/haproxy.cfg<<EOF
@@ -343,9 +343,9 @@ frontend k8s-https
 backend k8s-https
   mode tcp
   balance roundrobin
-  server master1.k8s.wisebeta.sidri.com 10.190.194.159:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
-  server master2.k8s.wisebeta.sidri.com 10.190.194.160:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
-  server master3.k8s.wisebeta.sidri.com 10.190.194.161:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
+  server master1.k8s 192.168.250.141:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
+  server master2.k8s 192.168.250.142:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
+  server master3.k8s 192.168.250.143:6443 weight 1 maxconn 1000 check inter 2000 rise 2 fall 3
 EOF
 
 docker run -d --name my-haproxy \
@@ -365,3 +365,91 @@ docker run --net=host --cap-add=NET_ADMIN -d \
 registry.cn-shanghai.aliyuncs.com/baicheng_dev/keepalived:2.0.16
 
 ```
+- haproxy与keepalived安装检查
+```
+# 查看日志
+docker logs my-haproxy
+docker logs k8s-keepalived
+
+# ping虚拟IP
+ping -c4 192.168.250.99
+
+# 查看haproxy状态
+http://master1.k8s:1080/haproxy-status
+http://master2.k8s:1080/haproxy-status
+http://master3.k8s:1080/haproxy-status
+```
+# 搭建k8s集群基础环境
+- 在所有master节点上配置环境变量  
+```
+vi .bash_profile
+export CP0_IP="192.168.250.99"
+export CP1_IP="192.168.250.141"
+export CP1_HOSTNAME="master1.k8s"
+export CP2_IP="192.168.250.142"
+export CP2_HOSTNAME="master2.k8s"
+export CP3_IP="192.168.250.143"
+export CP3_HOSTNAME="master3.k8s"
+
+source .bash_profile
+
+# 查看是否生效
+echo $CP0_IP
+```
+- 在master1上进行操作
+```
+cd /etc/kubernetes
+
+cat >kubeadm-config.yaml<<EOF
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: v1.15.0
+controlPlaneEndpoint:  $CP0_IP:8443
+controllerManagerExtraArgs:
+    node-monitor-grace-period: 10s
+    pod-eviction-timeout: 10s
+networking:
+    podSubnet: 10.244.0.0/16
+kubeProxy:
+    config:
+        mode: ipvs
+imageRepository: registry.cn-shanghai.aliyuncs.com/baicheng_dev
+clusterName: baicheng-k8s-cluster
+EOF
+
+sudo kubeadm init --config=kubeadm-config.yaml --experimental-upload-certs
+
+```
+- 根据init输出, 将剩余的master节点以及node节点全部join到集群中  
+- 同时根据init输出, 配置并使用kubectl  
+###### 安装检测
+- 使用kubectl get nodes查看是否所有节点均已加入集群, 并且处于notready状态  
+
+- 检测etcd集群状态
+```
+docker run --rm -it \
+--net host \
+-v /etc/kubernetes:/etc/kubernetes registry.cn-shanghai.aliyuncs.com/baicheng_dev/etcd:3.3.10 etcdctl \
+--cert-file /etc/kubernetes/pki/etcd/peer.crt \
+--key-file /etc/kubernetes/pki/etcd/peer.key \
+--ca-file /etc/kubernetes/pki/etcd/ca.crt \
+--endpoints https://${CP1_IP}:2379 cluster-health
+
+```
+# 配置网络插件 Calico
+- 在任意master节点上操作
+```
+cd /etc/kubernetes
+mkdir calico && cd calico
+
+vi kube-calico.yaml
+# kube-calico.yaml文件见项目目录
+
+kubectl apply -f kube-calico.yaml
+
+```
+- 使用kubectl get po --all-namespaces  
+- 这时再次使用kubectl get nodes, 所有节点均已ready  
+
+###### 至此, k8s高可用集群的基础环境均已搭建完毕
+###### 谢谢, 觉得有帮助, 给个star
