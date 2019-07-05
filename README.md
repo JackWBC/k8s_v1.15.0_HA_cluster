@@ -268,6 +268,7 @@ yum clean all
 yum makecache
 ```
 #### 安装相关插件
+- 在所有节点上操作
 ```
 yum install ipset -y
 
