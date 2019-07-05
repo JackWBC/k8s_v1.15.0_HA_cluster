@@ -1,10 +1,10 @@
 # k8s_v1.15.0_HA_cluster
 k8s_v1.15.0高可用集群基础环境搭建 (划重点: 不需要科学上网哦, 所有镜像都已备好^.^)
-[ipvs, calico, 堆叠式etcd集群]
+[ipvs, calico, 堆叠式etcd集群, haproxy+keepalived]
 
 # 虚拟机环境准备
 - 操作系统 CentOS7 x86_64 mini  
-- 网卡 ens33
+- 网卡 ens33(不同服务器的不一样, 将安装过程中对应的网卡名称改成自己的即可)
 - 3个master, 3个node, 域名与IP如下  
 
 | 角色      | 域名     | IP     |
