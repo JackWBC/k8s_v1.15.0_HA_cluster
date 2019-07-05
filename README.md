@@ -447,7 +447,7 @@ vi kube-calico.yaml
 kubectl apply -f kube-calico.yaml
 
 ```
-- 使用kubectl get po --all-namespaces  
+- 使用kubectl get po --all-namespaces 查看并等待所有pod running&ready
 - 这时再次使用kubectl get nodes, 所有节点均已ready  
 
 ###### 至此, k8s高可用集群的基础环境均已搭建完毕
