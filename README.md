@@ -372,7 +372,7 @@ docker logs k8s-keepalived
 # ping虚拟IP
 ping -c4 192.168.250.99
 
-# 查看haproxy状态
+# 查看haproxy状态 (用户名baicheng, 密码baicheng)
 http://master1.k8s:1080/haproxy-status
 http://master2.k8s:1080/haproxy-status
 http://master3.k8s:1080/haproxy-status
